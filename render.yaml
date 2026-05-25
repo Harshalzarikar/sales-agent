@@ -20,7 +20,6 @@ services:
   - type: web
     name: beaver-frontend
     env: static
-    plan: free
     buildCommand: yarn install && yarn build
     staticPublishPath: ./dist
     rootDir: frontend
