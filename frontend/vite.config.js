@@ -29,16 +29,5 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,         // Disable source maps in production (security)
     minify: 'esbuild',
-    chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      output: {
-        // Split vendor chunks for better caching
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          motion: ['framer-motion'],
-        },
-      },
-    },
   },
 })
