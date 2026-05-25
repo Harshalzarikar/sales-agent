@@ -39,8 +39,33 @@ class Settings(BaseSettings):
     # --- App Config ---
     app_name: str = "Beaver Agent"
     debug: bool = False
+    log_level: str = "INFO"
+
+    # --- Security ---
+    # Optional API key for protecting the /process endpoint.
+    # If set, callers must send "X-API-Key: <value>" header.
+    api_key: Optional[str] = None
+    # Comma-separated allowed CORS origins. Override in production.
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+    # Maximum length (chars) of accepted email text. Guards against DoS.
+    max_email_length: int = 10_000
+
+    # --- Google OAuth (Gmail integration) ---
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: str = "http://localhost:8000/callback"
+    google_token_file: str = "token.json"
+
+    # --- Email Poller ---
+    # How often (seconds) to poll Gmail for new unread emails.
+    poll_interval: int = 60
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parse allowed_origins string into a list."""
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
 
 settings = Settings()

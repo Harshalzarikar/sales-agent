@@ -1,0 +1,32 @@
+services:
+  # 1. Backend API (FastAPI via Docker)
+  - type: web
+    name: beaver-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+
+  # 2. Frontend (React via Static Site)
+  - type: web
+    name: beaver-frontend
+    env: static
+    plan: free
+    buildCommand: yarn install && yarn build
+    staticPublishPath: ./dist
+    rootDir: frontend
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: beaver-api
+          envVarKey: RENDER_EXTERNAL_URL

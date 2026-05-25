@@ -26,32 +26,36 @@ def researcher_node(state: AgentState) -> dict:
 
     llm = get_llm(role="researcher")
 
-    # Step 1: Extract company name from the email
-    extract_prompt = f"""Extract the company or organization name from this email. 
-Return ONLY the company name, nothing else. If none found, return 'Unknown'.
+    # Step 1: Extract company or main topic from the email
+    extract_prompt = f"""Extract the primary company, organization, or main topic from this email to research. 
+Return ONLY the name or topic, nothing else. If none found, return 'Unknown'.
 
 Email: {state['initial_email']}"""
 
     res = llm.invoke(extract_prompt)
     company = (res.content if hasattr(res, "content") else str(res)).strip()
-    logger.info(f"🔍 Company extracted: {company}")
+    logger.info(f"🔍 Entity extracted for research: {company}")
 
     # Step 2: Search for grounded facts
-    try:
-        results = search.invoke(f"{company} company overview products industry")
-        # Handle both string and list returns from Tavily
-        if isinstance(results, str):
-            info = results
-        elif results and isinstance(results, list):
-            info = "\n".join(
-                r.get("content", str(r)) if isinstance(r, dict) else str(r)
-                for r in results
-            )
-        else:
-            info = "No search results found."
-    except Exception as e:
-        logger.error(f"Research failed: {e}")
-        info = f"Research failed: {e}"
+    if company.lower() == "unknown":
+        info = "No specific company or topic identified in the email to research."
+        logger.info("Research skipped: Entity is Unknown.")
+    else:
+        try:
+            results = search.invoke(f"{company} overview products industry or key details")
+            # Handle both string and list returns from Tavily
+            if isinstance(results, str):
+                info = results
+            elif results and isinstance(results, list):
+                info = "\n".join(
+                    r.get("content", str(r)) if isinstance(r, dict) else str(r)
+                    for r in results
+                )
+            else:
+                info = "No search results found."
+        except Exception as e:
+            logger.error(f"Research failed: {e}")
+            info = f"Research failed: {e}"
 
     return {
         "company_name": company,

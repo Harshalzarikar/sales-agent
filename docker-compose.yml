@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # API: FastAPI backend (LangGraph multi-agent pipeline)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: beaver-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persist SQLite database between restarts
+      - ./beaver.db:/app/beaver.db
+      # Persist Google OAuth token
+      - ./token.json:/app/token.json
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - beaver-net
+
+  # ---------------------------------------------------------------------------
+  # Frontend: Vite (React) served via Nginx
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: beaver-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - beaver-net
+
+networks:
+  beaver-net:
+    driver: bridge

@@ -1,13 +1,60 @@
-langchain-google-genai
-langgraph
-langchain-community
-tavily-python
-python-dotenv
-langchain-tavily
-fastapi
-uvicorn
-requests
-streamlit
-pydantic-settings
-langchain-groq
-beautifulsoup4
+# =============================================================================
+# Beaver Agent — Python Dependencies
+# =============================================================================
+# Pin versions for reproducible production deployments.
+# Run `pip install -r requirements.txt` to install.
+# =============================================================================
+
+# --- LangChain / LangGraph (Agent Framework) ---
+langchain-google-genai>=2.0.0,<3.0.0
+langgraph>=0.2.0,<1.0.0
+langchain-community>=0.3.0,<1.0.0
+langchain-tavily>=0.1.0,<1.0.0
+langchain-groq>=0.2.0,<1.0.0
+
+# --- AI Search ---
+tavily-python>=0.5.0,<1.0.0
+
+# --- Web Framework ---
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.32.0,<1.0.0
+python-multipart>=0.0.12,<1.0.0     # For future file uploads
+
+# --- Rate Limiting ---
+slowapi>=0.1.9,<1.0.0
+
+# --- Data Validation ---
+pydantic>=2.9.0,<3.0.0
+pydantic-settings>=2.6.0,<3.0.0
+
+# --- HTTP Client ---
+requests>=2.32.0,<3.0.0
+httpx>=0.27.0,<1.0.0                # Async HTTP + FastAPI test client
+
+# --- Environment ---
+python-dotenv>=1.0.0,<2.0.0
+
+# --- Auth (Supabase JWT Verification) ---
+python-jose[cryptography]>=3.3.0,<4.0.0   # JWT decode/verify
+supabase>=2.0.0,<3.0.0                     # Supabase Python client
+
+# --- Billing ---
+stripe>=11.0.0,<12.0.0                     # Stripe payment processing
+
+
+# --- Google APIs (Gmail integration) ---
+google-auth>=2.35.0,<3.0.0
+google-auth-oauthlib>=1.2.0,<2.0.0
+google-auth-httplib2>=0.2.0,<1.0.0
+google-api-python-client>=2.150.0,<3.0.0
+
+# --- Web Scraping ---
+beautifulsoup4>=4.12.0,<5.0.0
+
+# --- Legacy UI (Streamlit) ---
+streamlit>=1.40.0,<2.0.0
+
+# --- Testing ---
+pytest>=8.3.0,<9.0.0
+pytest-asyncio>=0.24.0,<1.0.0
+pytest-cov>=6.0.0,<7.0.0
