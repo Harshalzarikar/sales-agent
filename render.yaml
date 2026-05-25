@@ -15,6 +15,18 @@ services:
         sync: false
       - key: TAVILY_API_KEY
         sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
 
   # 2. Frontend (React via Static Site)
   - type: web
@@ -29,3 +41,7 @@ services:
           type: web
           name: beaver-api
           envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
