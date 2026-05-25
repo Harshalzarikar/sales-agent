@@ -37,6 +37,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY --chown=appuser:appgroup . .
 
+# Ensure the /app directory is writable so SQLite can create the beaver.db file
+RUN chown appuser:appgroup /app
+
 # Switch to non-root user
 USER appuser
 
