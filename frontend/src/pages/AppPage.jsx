@@ -74,13 +74,13 @@ export default function AppPage() {
                       ? `Agent Active: ${streamState.node.toUpperCase()}...` 
                       : 'Agents are starting...'}
                   </div>
-                  {streamState?.state?.messages && (
+                  {Array.isArray(streamState?.state?.messages) && (
                     <div className={styles.streamMessages}>
-                      {streamState.state.messages.map((m, i) => (
+                      {streamState.state.messages.slice(-3).map((m, i) => (
                         <div key={i} className={styles.streamMessageItem}>
-                          {m.content || m}
+                          {m.content || (typeof m === 'string' ? m : JSON.stringify(m))}
                         </div>
-                      )).slice(-3)}
+                      ))}
                     </div>
                   )}
                 </div>

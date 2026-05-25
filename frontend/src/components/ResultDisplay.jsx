@@ -54,7 +54,7 @@ export default function ResultDisplay({ result }) {
         <div className={styles.section}>
           <div className={styles.sectionTitle}>🕵️ Execution Trace</div>
           <div className={styles.traceList}>
-            {trace.map((step, i) => (
+            {Array.isArray(trace) && trace.map((step, i) => (
               <div key={i} className={styles.traceItem}>
                 <span className={styles.traceDot} />
                 <span className={styles.traceText}>{step}</span>
