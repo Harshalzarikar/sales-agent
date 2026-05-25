@@ -8,7 +8,8 @@ import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+import json
 from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -112,7 +113,6 @@ async def health():
 
 @app.post(
     "/process",
-    response_model=ProcessResponse,
     tags=["Agent Pipeline"],
     dependencies=[Depends(verify_api_key)],
 )
@@ -124,59 +124,66 @@ async def process_email(
 ):
     """
     Main endpoint: Runs the full multi-agent orchestrator on an inbound email.
-
-    Authenticated users (Supabase JWT) have their results stored per-user.
-    Rate limited to 20 requests/minute per IP.
+    Streams progress using Server-Sent Events (SSE).
     """
     thread_id = req.thread_id or str(uuid.uuid4())
     logger.info(f"📨 New email [Thread: {thread_id}] user={user_id or 'anon'} ({len(req.email_text)} chars)")
-    start = time.time()
 
-    try:
-        result = graph.invoke(
-            {
-                "initial_email": req.email_text,
-                "messages": [f"📨 Request received (Thread: {thread_id})"],
-            },
-            {
-                "recursion_limit": settings.recursion_limit,
-                "configurable": {"thread_id": thread_id},
-            },
-        )
-    except Exception as e:
-        logger.error(f"Graph execution failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Agent pipeline error: {str(e)}")
+    async def event_generator():
+        start = time.time()
+        final_state = {}
+        try:
+            # Send initial event
+            yield f"data: {json.dumps({'type': 'start', 'thread_id': thread_id})}\n\n"
 
-    category = result.get("category", "Unknown")
-    company = result.get("company_name")
-    draft = result.get("draft_email", "No response generated.")
-    revisions = result.get("revision_count", 0)
-    trace = result.get("messages", [])
-    elapsed_ms = int((time.time() - start) * 1000)
+            async for event in graph.astream(
+                {
+                    "initial_email": req.email_text,
+                    "messages": [f"📨 Request received (Thread: {thread_id})"],
+                },
+                {
+                    "recursion_limit": settings.recursion_limit,
+                    "configurable": {"thread_id": thread_id},
+                },
+                stream_mode="updates"
+            ):
+                # event is a dict where key is the node name and value is the state update
+                for node_name, state_update in event.items():
+                    # Update our local copy of the final state
+                    final_state.update(state_update)
+                    
+                    # Yield progress to the client
+                    yield f"data: {json.dumps({'type': 'update', 'node': node_name, 'state': state_update})}\n\n"
 
-    # Persist to DB — associate with user_id if authenticated
-    try:
-        db.save_record(
-            category=category,
-            company=company or "N/A",
-            draft=draft,
-            thread_id=thread_id,
-            user_id=user_id,
-        )
-    except Exception as e:
-        logger.error(f"DB save failed: {e}")
+            # After the stream completes, save to the database
+            category = final_state.get("category", "Unknown")
+            company = final_state.get("company_name")
+            draft = final_state.get("draft_email", "No response generated.")
+            revisions = final_state.get("revision_count", 0)
+            trace = final_state.get("messages", [])
+            elapsed_ms = int((time.time() - start) * 1000)
 
-    logger.info(f"✅ Done in {elapsed_ms}ms | {category} | Thread={thread_id}")
+            try:
+                db.save_record(
+                    category=category,
+                    company=company or "N/A",
+                    draft=draft,
+                    thread_id=thread_id,
+                    user_id=user_id,
+                )
+            except Exception as e:
+                logger.error(f"DB save failed: {e}")
 
-    return ProcessResponse(
-        thread_id=thread_id,
-        category=category,
-        company=company,
-        draft=draft,
-        revisions=revisions,
-        time_ms=elapsed_ms,
-        trace=trace,
-    )
+            logger.info(f"✅ Done in {elapsed_ms}ms | {category} | Thread={thread_id}")
+            
+            # Send final payload
+            yield f"data: {json.dumps({'type': 'complete', 'result': {'thread_id': thread_id, 'category': category, 'company': company, 'draft': draft, 'revisions': revisions, 'time_ms': elapsed_ms, 'trace': trace}})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Graph execution failed: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get(

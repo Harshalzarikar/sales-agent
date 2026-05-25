@@ -11,6 +11,7 @@ export default function AppPage() {
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [streamState, setStreamState] = useState(null);
 
   const [threadId] = useState(() => {
     const saved = sessionStorage.getItem('beaver_thread_id');
@@ -23,6 +24,11 @@ export default function AppPage() {
   const handleResult = (data) => {
     setResult(data);
     setHistory(prev => [...prev, data]);
+    setStreamState(null); // Clear stream state when complete
+  };
+
+  const handleStreamEvent = (event) => {
+    setStreamState(event);
   };
 
   return (
@@ -53,6 +59,7 @@ export default function AppPage() {
               <EmailInput
                 onResult={handleResult}
                 onLoading={setIsLoading}
+                onStreamEvent={handleStreamEvent}
                 threadId={threadId}
               />
               {isLoading && (
@@ -62,7 +69,20 @@ export default function AppPage() {
                     <div className={styles.pulse} style={{ animationDelay: '0.2s' }} />
                     <div className={styles.pulse} style={{ animationDelay: '0.4s' }} />
                   </div>
-                  <div className={styles.loadingText}>Agents are working...</div>
+                  <div className={styles.loadingText}>
+                    {streamState?.node 
+                      ? `Agent Active: ${streamState.node.toUpperCase()}...` 
+                      : 'Agents are starting...'}
+                  </div>
+                  {streamState?.state?.messages && (
+                    <div className={styles.streamMessages}>
+                      {streamState.state.messages.map((m, i) => (
+                        <div key={i} className={styles.streamMessageItem}>
+                          {m.content || m}
+                        </div>
+                      )).slice(-3)}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

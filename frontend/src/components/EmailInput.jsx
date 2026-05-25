@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styles from './EmailInput.module.css';
-import { processEmail } from '../services/api';
+import { processEmailStream } from '../services/api';
 
 const SAMPLES = [
   {
@@ -17,7 +17,7 @@ const SAMPLES = [
   },
 ];
 
-export default function EmailInput({ onResult, onLoading, threadId }) {
+export default function EmailInput({ onResult, onLoading, onStreamEvent, threadId }) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,8 +29,15 @@ export default function EmailInput({ onResult, onLoading, threadId }) {
     onLoading(true);
 
     try {
-      const res = await processEmail(text, threadId);
-      onResult({ ...res.data, emailText: text });
+      await processEmailStream(text, threadId, (event) => {
+        if (event.type === 'update') {
+          onStreamEvent && onStreamEvent(event);
+        } else if (event.type === 'complete') {
+          onResult({ ...event.result, emailText: text });
+        } else if (event.type === 'error') {
+          throw new Error(event.detail);
+        }
+      });
     } catch (err) {
       const msg = err.response?.data?.detail || err.message || 'Pipeline failed. Is the backend running?';
       setError(msg);
