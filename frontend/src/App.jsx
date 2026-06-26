@@ -8,19 +8,11 @@ import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-base)' }}>
-      <div className="spinner-ring" />
-    </div>
-  );
-  return user ? children : <Navigate to="/login" replace />;
+  return children;
 }
 
 function PublicRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  return !user ? children : <Navigate to="/dashboard" replace />;
+  return children;
 }
 
 export default function App() {

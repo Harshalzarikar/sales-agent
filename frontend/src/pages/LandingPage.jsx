@@ -161,8 +161,7 @@ export default function LandingPage() {
             <a href="#pricing" className={styles.navLink}>Pricing</a>
           </div>
           <div className={styles.navActions}>
-            <Link to="/login" className={styles.navLogin}>Log in</Link>
-            <Link to="/signup" className={styles.navCta}>Get Started Free</Link>
+            <Link to="/app" className={styles.navCta}>Go to Demo</Link>
           </div>
         </div>
       </nav>
@@ -192,8 +191,8 @@ export default function LandingPage() {
               and quality-checks every word — all in under 5 seconds.
             </p>
             <div className={styles.heroCtas}>
-              <Link to="/signup" className={styles.ctaPrimary}>
-                Start Free — No Credit Card
+              <Link to="/app" className={styles.ctaPrimary}>
+                Start Demo Now
                 <span className={styles.ctaArrow}>→</span>
               </Link>
               <Link to="/app" className={styles.ctaSecondary}>
@@ -352,8 +351,8 @@ export default function LandingPage() {
           <p className={styles.ctaBannerSub}>
             Join hundreds of sales teams using Beaver Agent to respond faster and close more deals.
           </p>
-          <Link to="/signup" className={styles.ctaPrimary}>
-            Get Started Free — No Credit Card
+          <Link to="/app" className={styles.ctaPrimary}>
+            Go to Demo
             <span className={styles.ctaArrow}>→</span>
           </Link>
         </AnimatedSection>
