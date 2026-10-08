@@ -18,11 +18,29 @@ from tests.sse_helpers import (
 # Health Check
 # ---------------------------------------------------------------------------
 
+def test_root_returns_service_metadata(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "service" in data
+    assert "version" in data
+
+
 def test_health_returns_healthy(client):
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+    assert "service" in data
+
+
+def test_json_version_returns_version_info(client):
+    response = client.get("/json/version")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "version" in data
     assert "service" in data
 
 

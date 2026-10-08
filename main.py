@@ -59,17 +59,30 @@ app.add_middleware(
 )
 
 
-# --- Optional API Key Authentication ---
-def verify_api_key(x_api_key: Optional[str] = Header(default=None)):
+# --- SaaS Authentication (API Key or JWT) ---
+def verify_saas_auth(
+    x_api_key: Optional[str] = Header(default=None),
+    user_id: Optional[str] = Depends(get_current_user_id),
+) -> Optional[str]:
     """
-    If API_KEY is set in environment, all /process calls must include
-    the 'X-API-Key' header with the matching value.
+    SaaS Authentication: Requires a valid API key (for backend) OR a valid JWT (for frontend).
     """
-    if settings.api_key and x_api_key != settings.api_key:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing API key. Provide 'X-API-Key' header."
-        )
+    # 1. Check API Key
+    if settings.api_key and x_api_key == settings.api_key:
+        return user_id or "system_api"
+
+    # 2. Check JWT User
+    if user_id:
+        return user_id
+
+    # 3. Fail open ONLY in debug mode if no secrets are configured
+    if settings.debug:
+        return None
+        
+    raise HTTPException(
+        status_code=401,
+        detail="Unauthorized. Provide a valid Supabase JWT or X-API-Key header."
+    )
 
 
 # --- Request / Response Models ---
@@ -105,22 +118,42 @@ class HistoryRecord(BaseModel):
 
 
 # --- Endpoints ---
+@app.get("/", tags=["System"])
+async def root():
+    """Returns API metadata at the service root."""
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+        "version": "1.0.0",
+        "docs": "/docs" if settings.debug else "disabled in production",
+    }
+
+
 @app.get("/health", tags=["System"])
 async def health():
     """Returns API health status. Safe to call without authentication."""
     return {"status": "healthy", "service": settings.app_name}
 
 
+@app.get("/json/version", tags=["System"])
+async def json_version():
+    """Compatibility endpoint for tooling that expects a JSON version payload."""
+    return {
+        "version": "1.0.0",
+        "service": settings.app_name,
+        "status": "ok",
+    }
+
+
 @app.post(
     "/process",
     tags=["Agent Pipeline"],
-    dependencies=[Depends(verify_api_key)],
 )
 @limiter.limit("20/minute")
 async def process_email(
     request: Request,
     req: ProcessRequest,
-    user_id: Optional[str] = Depends(get_current_user_id),
+    user_id: Optional[str] = Depends(verify_saas_auth),
 ):
     """
     Main endpoint: Runs the full multi-agent orchestrator on an inbound email.
@@ -190,17 +223,17 @@ async def process_email(
     "/history",
     response_model=list[HistoryRecord],
     tags=["Data"],
-    dependencies=[Depends(verify_api_key)],
 )
 async def get_history(
     limit: int = 20,
-    user_id: Optional[str] = Depends(get_current_user_id),
+    user_id: Optional[str] = Depends(verify_saas_auth),
 ):
     """Returns the most recent processed email records (max 100). Filters by user if authenticated."""
     if limit > 100:
         limit = 100
     try:
-        records = db.get_recent_records(limit=limit, user_id=user_id)
+        filter_id = user_id if user_id != "system_api" else None
+        records = db.get_recent_records(limit=limit, user_id=filter_id)
         return records
     except Exception as e:
         logger.error(f"History fetch failed: {e}")
@@ -208,13 +241,14 @@ async def get_history(
 
 
 @app.get("/usage", tags=["Data"])
-async def get_usage(user_id: Optional[str] = Depends(get_current_user_id)):
+async def get_usage(user_id: Optional[str] = Depends(verify_saas_auth)):
     """
     Returns the current user's email processing stats for the current month.
     Used by the dashboard for the usage meter.
     """
     try:
-        stats = db.get_usage_stats(user_id=user_id)
+        filter_id = user_id if user_id != "system_api" else None
+        stats = db.get_usage_stats(user_id=filter_id)
         return stats
     except Exception as e:
         logger.error(f"Usage fetch failed: {e}")

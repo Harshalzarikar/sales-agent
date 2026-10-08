@@ -36,6 +36,7 @@ class Settings(BaseSettings):
 
     # --- DB Config ---
     db_name: str = "beaver.db"
+    database_url: Optional[str] = None  # Add PostgreSQL support for SaaS
 
     # --- App Config ---
     app_name: str = "Beaver Agent"

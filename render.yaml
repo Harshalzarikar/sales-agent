@@ -25,6 +25,8 @@ services:
         sync: false
       - key: GOOGLE_REDIRECT_URI
         sync: false
+      - key: DATABASE_URL
+        sync: false
 
   # 2. Frontend (React via Static Site)
   - type: web
@@ -33,6 +35,10 @@ services:
     buildCommand: yarn install && yarn build
     staticPublishPath: ./dist
     rootDir: frontend
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
         fromService:

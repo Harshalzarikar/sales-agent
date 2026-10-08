@@ -8,10 +8,16 @@ import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
 function PublicRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <div>Loading...</div>;
+  if (user) return <Navigate to="/dashboard" replace />;
   return children;
 }
 

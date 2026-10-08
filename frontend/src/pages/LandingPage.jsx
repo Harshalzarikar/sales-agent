@@ -161,7 +161,8 @@ export default function LandingPage() {
             <a href="#pricing" className={styles.navLink}>Pricing</a>
           </div>
           <div className={styles.navActions}>
-            <Link to="/app" className={styles.navCta}>Go to Demo</Link>
+            <Link to="/login" className={styles.navLink} style={{marginRight: '1rem', fontWeight: 500}}>Login</Link>
+            <Link to="/signup" className={styles.navCta}>Sign Up Free</Link>
           </div>
         </div>
       </nav>
@@ -191,12 +192,12 @@ export default function LandingPage() {
               and quality-checks every word — all in under 5 seconds.
             </p>
             <div className={styles.heroCtas}>
-              <Link to="/app" className={styles.ctaPrimary}>
-                Start Demo Now
+              <Link to="/signup" className={styles.ctaPrimary}>
+                Start for Free
                 <span className={styles.ctaArrow}>→</span>
               </Link>
-              <Link to="/app" className={styles.ctaSecondary}>
-                Live Demo
+              <Link to="/login" className={styles.ctaSecondary}>
+                Log In
               </Link>
             </div>
           </motion.div>

@@ -36,6 +36,11 @@ def get_current_user_id(authorization: Optional[str] = Header(default=None)) -> 
     # If no Supabase is configured, extract sub claim without verification
     # (for development only)
     if not SUPABASE_JWT_SECRET and not SUPABASE_URL:
+        from src.config import settings
+        if not settings.debug:
+            logger.error("CRITICAL: Supabase JWT Secret missing in PRODUCTION!")
+            raise HTTPException(status_code=500, detail="Server authentication is misconfigured.")
+            
         logger.warning("Supabase not configured — skipping JWT verification (dev mode)")
         try:
             import base64

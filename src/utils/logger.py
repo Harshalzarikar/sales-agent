@@ -15,8 +15,10 @@ def get_logger(name: str) -> logging.Logger:
         try:
             from src.config import settings
             level = getattr(logging, settings.log_level.upper(), logging.INFO)
+            is_debug = settings.debug
         except Exception:
             level = logging.INFO
+            is_debug = True
 
         logger.setLevel(level)
 
@@ -26,10 +28,19 @@ def get_logger(name: str) -> logging.Logger:
         ) if hasattr(sys.stdout, "buffer") else sys.stdout
 
         handler = logging.StreamHandler(utf8_stdout)
-        formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
+        
+        if not is_debug:
+            # Structured JSON logging for production (Datadog/Cloudwatch)
+            formatter = logging.Formatter(
+                '{"time": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
+                datefmt="%Y-%m-%dT%H:%M:%S"
+            )
+        else:
+            formatter = logging.Formatter(
+                "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+            
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.propagate = False  # Prevent double-logging under uvicorn
