@@ -52,35 +52,58 @@ if run_btn:
     else:
         with st.spinner("Executing multi-agent pipeline..."):
             try:
-                res = requests.post(
+                response = requests.post(
                     f"{API_URL}/process",
                     json={"email_text": email_text},
                     timeout=120,
-                ).json()
+                    stream=True
+                )
+                
+                status_placeholder = st.empty()
+                res = None
+                
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith("data: "):
+                            data_str = decoded_line[6:]
+                            try:
+                                data = json.loads(data_str)
+                                if data.get('type') == 'update':
+                                    status_placeholder.info(f"Agent Action: {data.get('node', 'working')}...")
+                                elif data.get('type') == 'complete':
+                                    res = data.get('result')
+                                    status_placeholder.empty()
+                                elif data.get('type') == 'error':
+                                    st.error(f"Pipeline Error: {data.get('detail')}")
+                                    break
+                            except json.JSONDecodeError:
+                                pass
 
-                with col_output:
-                    # Status Badge
-                    cat = res["category"]
-                    color = "green" if "Lead" in cat else "orange" if "Complaint" in cat else "red"
-                    st.markdown(f"### Status: :{color}[{cat}]")
-                    
-                    # Metrics
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Company", res.get("company") or "N/A")
-                    m2.metric("Revisions", res.get("revisions", 0))
-                    m3.metric("Time", f"{res.get('time_ms', 0)}ms")
-                    
-                    st.divider()
-                    
-                    # Draft
-                    st.subheader("📝 Final Draft")
-                    st.text_area("Output", value=res["draft"], height=250, label_visibility="collapsed")
-                    st.download_button("💾 Download", data=res["draft"], file_name="draft.txt")
-                    
-                    # Trace
-                    with st.expander("🕵️ Agent Execution Trace", expanded=True):
-                        for step in res.get("trace", []):
-                            st.write(f"→ {step}")
+                if res:
+                    with col_output:
+                        # Status Badge
+                        cat = res["category"]
+                        color = "green" if "Lead" in cat else "orange" if "Complaint" in cat else "red"
+                        st.markdown(f"### Status: :{color}[{cat}]")
+                        
+                        # Metrics
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Company", res.get("company") or "N/A")
+                        m2.metric("Revisions", res.get("revisions", 0))
+                        m3.metric("Time", f"{res.get('time_ms', 0)}ms")
+                        
+                        st.divider()
+                        
+                        # Draft
+                        st.subheader("📝 Final Draft")
+                        st.text_area("Output", value=res["draft"], height=250, label_visibility="collapsed")
+                        st.download_button("💾 Download", data=res["draft"], file_name="draft.txt")
+                        
+                        # Trace
+                        with st.expander("🕵️ Agent Execution Trace", expanded=True):
+                            for step in res.get("trace", []):
+                                st.write(f"→ {step}")
                             
             except requests.exceptions.ConnectionError:
                 st.error(f"Cannot connect to backend at `{API_URL}`.")

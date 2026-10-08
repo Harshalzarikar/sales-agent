@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     # --- API Keys ---
     google_api_key: Optional[str] = None
     groq_api_key: Optional[str] = None
+    groq_fallback_model: str = "openai/gpt-oss-20b"
     tavily_api_key: Optional[str] = None
 
     # --- Model Routing (Interview Q8: Tiered Cost Optimization) ---

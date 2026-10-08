@@ -97,7 +97,6 @@ def build_graph():
     # --- Linear Edge: Complaint Path ---
     workflow.add_edge("support", END)
 
-    # --- Compile with Recursion Limit (Interview Q5, safeguard 2) ---
     compiled = workflow.compile()
     logger.info(f"📊 Graph compiled (recursion_limit={settings.recursion_limit})")
 

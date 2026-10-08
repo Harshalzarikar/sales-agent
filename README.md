@@ -100,7 +100,7 @@ The system features a **React 19 SaaS frontend** with Supabase authentication, a
 - **Model Routing**: Each agent uses a model tier optimized for its task to balance cost and quality
 - **Grounded Responses**: The Writer is strictly constrained to only use facts from Tavily research data — no hallucinated company details
 - **PII Redaction**: Email/phone/credit card numbers are automatically redacted before LLM processing
-- **Graceful Fallback**: Primary model (Google Gemini) with automatic fallback to Groq (Llama 3.3)
+- **Graceful Fallback**: Primary model (Google Gemini) with automatic fallback to Groq (GPT-OSS 20B)
 
 ---
 
@@ -114,7 +114,7 @@ The system features a **React 19 SaaS frontend** with Supabase authentication, a
 | **LangGraph** | Multi-agent orchestration |
 | **LangChain** | LLM abstraction layer |
 | **Google Gemini** | Primary LLM provider |
-| **Groq (Llama 3.3)** | Fallback LLM provider |
+| **Groq (GPT-OSS 20B)** | Fallback LLM provider |
 | **Tavily** | Real-time web search for company research |
 | **SQLite** | Local persistent storage |
 | **Supabase** | Auth (JWT) + cloud database |
@@ -304,7 +304,8 @@ All configuration is managed through environment variables, loaded via [Pydantic
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GROQ_API_KEY` | — | Groq API key for Llama 3.3 fallback |
+| `GROQ_API_KEY` | — | Groq API key for GPT-OSS 20B fallback |
+| `GROQ_FALLBACK_MODEL` | `openai/gpt-oss-20b` | Groq model ID when Gemini fails |
 | `TAVILY_API_KEY` | — | Tavily API key for company research |
 | `API_KEY` | — | Static API key to protect endpoints |
 | `DEBUG` | `False` | Enable debug mode (shows Swagger docs) |

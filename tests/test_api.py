@@ -2,8 +2,16 @@
 API integration tests for the Beaver Agent FastAPI application.
 Tests cover: health check, process endpoint, input validation, auth, and history.
 """
+import json
+
 import pytest
 from unittest.mock import patch
+
+from tests.sse_helpers import (
+    mock_graph_astream,
+    mock_graph_astream_error,
+    parse_sse_process_response,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -23,11 +31,11 @@ def test_health_returns_healthy(client):
 # ---------------------------------------------------------------------------
 
 def test_process_lead_email(client, sample_lead_email, mock_graph_result):
-    with patch("main.graph.invoke", return_value=mock_graph_result):
+    with patch("main.graph.astream", mock_graph_astream(mock_graph_result)):
         response = client.post("/process", json={"email_text": sample_lead_email})
 
     assert response.status_code == 200
-    data = response.json()
+    data = parse_sse_process_response(response)
     assert data["category"] == "Lead"
     assert data["company"] == "Acme Corp"
     assert "draft" in data
@@ -38,11 +46,11 @@ def test_process_lead_email(client, sample_lead_email, mock_graph_result):
 
 
 def test_process_complaint_email(client, sample_complaint_email, mock_complaint_result):
-    with patch("main.graph.invoke", return_value=mock_complaint_result):
+    with patch("main.graph.astream", mock_graph_astream(mock_complaint_result)):
         response = client.post("/process", json={"email_text": sample_complaint_email})
 
     assert response.status_code == 200
-    data = response.json()
+    data = parse_sse_process_response(response)
     assert data["category"] == "Complaint"
     assert "draft" in data
 
@@ -50,14 +58,14 @@ def test_process_complaint_email(client, sample_complaint_email, mock_complaint_
 def test_process_uses_provided_thread_id(client, sample_lead_email, mock_graph_result):
     """If caller provides a thread_id, the same ID must appear in the response."""
     custom_thread = "test-thread-abc-123"
-    with patch("main.graph.invoke", return_value=mock_graph_result):
+    with patch("main.graph.astream", mock_graph_astream(mock_graph_result)):
         response = client.post(
             "/process",
             json={"email_text": sample_lead_email, "thread_id": custom_thread},
         )
 
     assert response.status_code == 200
-    assert response.json()["thread_id"] == custom_thread
+    assert parse_sse_process_response(response)["thread_id"] == custom_thread
 
 
 # ---------------------------------------------------------------------------
@@ -86,12 +94,19 @@ def test_process_rejects_missing_email_field(client):
 # ---------------------------------------------------------------------------
 
 def test_process_handles_graph_exception(client, sample_lead_email):
-    """If the agent graph raises, the API should return 500 (not crash)."""
-    with patch("main.graph.invoke", side_effect=RuntimeError("LLM timeout")):
+    """If the agent graph raises, the API should emit an SSE error (not crash)."""
+    with patch("main.graph.astream", mock_graph_astream_error(RuntimeError("LLM timeout"))):
         response = client.post("/process", json={"email_text": sample_lead_email})
 
-    assert response.status_code == 500
-    assert "Agent pipeline error" in response.json()["detail"]
+    assert response.status_code == 200
+    detail = None
+    for line in response.text.split("\n"):
+        if line.startswith("data: "):
+            payload = json.loads(line[6:].strip())
+            if payload.get("type") == "error":
+                detail = payload.get("detail", "")
+    assert detail is not None
+    assert "LLM timeout" in detail
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +116,7 @@ def test_process_handles_graph_exception(client, sample_lead_email):
 def test_process_accepts_valid_api_key(client, sample_lead_email, mock_graph_result):
     """When API_KEY is configured, correct header must be accepted."""
     with patch("main.settings.api_key", "test-secret-key"):
-        with patch("main.graph.invoke", return_value=mock_graph_result):
+        with patch("main.graph.astream", mock_graph_astream(mock_graph_result)):
             response = client.post(
                 "/process",
                 json={"email_text": sample_lead_email},
@@ -145,7 +160,7 @@ def test_history_limit_capped_at_100(client):
         response = client.get("/history?limit=999")
     assert response.status_code == 200
     # Verify the cap was applied — should be called with limit=100 not 999
-    mock_get.assert_called_once_with(limit=100)
+    mock_get.assert_called_once_with(limit=100, user_id=None)
 
 
 def test_history_returns_records(client):

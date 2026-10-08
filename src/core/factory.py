@@ -44,10 +44,10 @@ def get_llm(role: str = "default", structured_output=None):
         except Exception as e:
             logger.warning(f"Primary LLM structured output config failed: {e}")
 
-    # Fallback: Groq (Llama 3.3)
+    # Fallback: Groq (GPT-OSS 20B)
     if settings.groq_api_key:
         fallback_llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model=settings.groq_fallback_model,
             groq_api_key=settings.groq_api_key,
             temperature=temperature,
         )
